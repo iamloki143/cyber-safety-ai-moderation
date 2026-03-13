@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Cyber Safety Chat</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+</head>
+
+<body>
+
+<div class="app">
+
+<h1>Cyber Safety Chat</h1>
+
+<div id="chatBox"></div>
+
+<div class="chat-controls">
+
+<input id="messageInput" placeholder="Type message">
+
+<button onclick="sendMessage()">Send</button>
+
+</div>
+
+<div class="upload">
+
+<input type="file" id="imageInput">
+
+<button onclick="sendImage()">Upload Image</button>
+
+</div>
+
+<div class="upload">
+
+<input type="file" id="videoInput">
+
+<button onclick="sendVideo()">Upload Video</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+// -----------------------------
+// TEXT MESSAGE
+// -----------------------------
+async function sendMessage(){
+
+    const input = document.getElementById("messageInput")
+    const chat = document.getElementById("chatBox")
+
+    const message = input.value
+
+    if(message.trim() === "") return
+
+    const response = await fetch("/chat",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body: JSON.stringify({text: message})
+    })
+
+    const data = await response.json()
+
+    const msg = document.createElement("div")
+    msg.className = "chat-message"
+    msg.innerText = data.reply
+
+    chat.appendChild(msg)
+
+    chat.scrollTop = chat.scrollHeight
+
+    input.value = ""
+}
+
+
+
+// -----------------------------
+// IMAGE UPLOAD
+// -----------------------------
+async function sendImage(){
+
+    const fileInput = document.getElementById("imageInput")
+    const chat = document.getElementById("chatBox")
+
+    if(!fileInput.files.length) return
+
+    const formData = new FormData()
+    formData.append("file", fileInput.files[0])
+
+    const response = await fetch("/upload-image",{
+        method:"POST",
+        body: formData
+    })
+
+    const data = await response.json()
+
+    if(data.status === "blocked"){
+
+        const msg = document.createElement("div")
+        msg.className = "chat-warning"
+        msg.innerText = "⚠ Image blocked: " + data.reason
+
+        chat.appendChild(msg)
+
+    }
+    else{
+
+        const img = document.createElement("img")
+        img.src = data.image_path
+        img.className = "chat-image"
+
+        chat.appendChild(img)
+
+    }
+
+    chat.scrollTop = chat.scrollHeight
+
+}
+
+
+
+// -----------------------------
+// VIDEO UPLOAD
+// -----------------------------
+async function sendVideo(){
+
+    const fileInput = document.getElementById("videoInput")
+    const chat = document.getElementById("chatBox")
+
+    if(!fileInput.files.length) return
+
+    const formData = new FormData()
+    formData.append("file", fileInput.files[0])
+
+    const response = await fetch("/upload-video",{
+        method:"POST",
+        body: formData
+    })
+
+    const data = await response.json()
+
+    if(data.status === "blocked"){
+
+        const msg = document.createElement("div")
+        msg.className = "chat-warning"
+        msg.innerText = "⚠ Video blocked: " + data.reason
+
+        chat.appendChild(msg)
+
+    }
+    else{
+
+        const video = document.createElement("video")
+
+        video.src = data.video_path
+        video.controls = true
+        video.width = 300
+        video.className = "chat-video"
+
+        chat.appendChild(video)
+
+    }
+
+    chat.scrollTop = chat.scrollHeight
+
+}
+
+</script>
+
+</body>
+</html>
