@@ -73,9 +73,7 @@ def dashboard():
 # ---------------------------
 @app.get("/logs")
 def get_logs():
-
     logs = list(moderation_logs.find({}, {"_id": 0}))
-
     return logs
 
 
@@ -202,12 +200,23 @@ async def upload_image(file: UploadFile = File(...)):
     if result["status"] == "unsafe":
         status = "blocked"
 
+    # Human readable reason
+    if result["category"] == "sexual_content":
+        reason = "The image contains nudity or sexually explicit content"
+
+    elif result["category"] == "violence":
+        reason = "The image contains violent or harmful content"
+
+    else:
+        reason = "Image passed safety moderation"
+
     log = {
         "type": "image",
         "content": file.filename,
         "category": result["category"],
         "confidence": result["confidence"],
         "status": status,
+        "reason": reason,
         "timestamp": datetime.utcnow()
     }
 
@@ -216,7 +225,7 @@ async def upload_image(file: UploadFile = File(...)):
     if status == "blocked":
         return {
             "status": "blocked",
-            "reason": result["category"]
+            "reason": reason
         }
 
     return {
@@ -246,12 +255,23 @@ async def upload_video(file: UploadFile = File(...)):
     if result["status"] == "unsafe":
         status = "blocked"
 
+    # Human readable reason
+    if result["category"] == "sexual_content":
+        reason = "The video contains nudity or sexually explicit content"
+
+    elif result["category"] == "violence":
+        reason = "The video contains violent scenes or physical threats"
+
+    else:
+        reason = "Video passed safety moderation"
+
     log = {
         "type": "video",
         "content": file.filename,
         "category": result["category"],
         "confidence": result["confidence"],
         "status": status,
+        "reason": reason,
         "timestamp": datetime.utcnow()
     }
 
@@ -260,7 +280,7 @@ async def upload_video(file: UploadFile = File(...)):
     if status == "blocked":
         return {
             "status": "blocked",
-            "reason": result["category"]
+            "reason": reason
         }
 
     return {

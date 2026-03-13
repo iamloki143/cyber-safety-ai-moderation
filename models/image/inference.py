@@ -13,7 +13,7 @@ def analyze_image(image_path):
             "confidence": nsfw_score
         }
 
-    if is_violent:
+    if is_violent and violence_score > 0.45:
         return {
             "status": "unsafe",
             "category": "violence",

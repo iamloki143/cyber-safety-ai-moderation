@@ -25,7 +25,8 @@ def predict_violence(image_path):
 
     max_score = max(violence_score, fighting_score, weapon_score)
 
-    if max_score > safe_score:
+# Require strong confidence
+    if max_score > 0.45:
         return max_score, True
     else:
         return safe_score, False

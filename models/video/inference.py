@@ -37,7 +37,7 @@ def analyze_video(video_path):
 
     cap.release()
 
-    if unsafe_frames > 0:
+    if unsafe_frames > 3:
 
         return {
             "status": "unsafe",
