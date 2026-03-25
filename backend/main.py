@@ -23,7 +23,6 @@ from models.video.inference import analyze_video
 # ---------------------------
 app = FastAPI()
 
-# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,14 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure uploads folder exists
 os.makedirs("uploads", exist_ok=True)
 
-# Mount static folders
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# Include routers
 app.include_router(text.router)
 app.include_router(image.router)
 
@@ -53,23 +49,20 @@ def health_check():
 
 
 # ---------------------------
-# CHAT PAGE
+# PAGES
 # ---------------------------
 @app.get("/")
 def home():
     return FileResponse("frontend/index.html")
 
 
-# ---------------------------
-# DASHBOARD PAGE
-# ---------------------------
 @app.get("/dashboard")
 def dashboard():
     return FileResponse("frontend/dashboard.html")
 
 
 # ---------------------------
-# GET MODERATION LOGS
+# GET LOGS
 # ---------------------------
 @app.get("/logs")
 def get_logs():
@@ -78,30 +71,7 @@ def get_logs():
 
 
 # ---------------------------
-# SYSTEM STATISTICS
-# ---------------------------
-@app.get("/stats")
-def get_stats():
-
-    total = moderation_logs.count_documents({})
-
-    text_count = moderation_logs.count_documents({"type": "text"})
-    image_count = moderation_logs.count_documents({"type": "image"})
-    video_count = moderation_logs.count_documents({"type": "video"})
-
-    blocked = moderation_logs.count_documents({"status": "blocked"})
-
-    return {
-        "total_logs": total,
-        "text_messages": text_count,
-        "image_uploads": image_count,
-        "video_uploads": video_count,
-        "blocked_content": blocked
-    }
-
-
-# ---------------------------
-# EXPORT REPORT (CSV)
+# EXPORT CSV
 # ---------------------------
 @app.get("/export-report")
 def export_report():
@@ -112,13 +82,9 @@ def export_report():
     writer = csv.writer(output)
 
     writer.writerow([
-        "Type",
-        "Content",
-        "Category",
-        "Status",
-        "Confidence",
-        "Reason",
-        "Timestamp"
+        "Type", "Content", "Category",
+        "Status", "Confidence", "Risk",
+        "Reason", "Timestamp"
     ])
 
     for log in logs:
@@ -128,6 +94,7 @@ def export_report():
             log.get("category"),
             log.get("status"),
             log.get("confidence"),
+            log.get("risk"),
             log.get("reason"),
             log.get("timestamp")
         ])
@@ -145,14 +112,15 @@ def export_report():
 
 
 # ---------------------------
-# TEXT MESSAGE MODERATION
+# TEXT MODERATION
 # ---------------------------
 @app.post("/chat")
 def chat(message: dict):
 
     text_msg = message["text"]
-
     result = predict_text(text_msg)
+
+    confidence = result["confidence"]
 
     status = "allowed"
     reason = "Safe message"
@@ -161,11 +129,18 @@ def chat(message: dict):
         status = "blocked"
         reason = "Toxic abusive language detected"
 
+    # 🔥 RISK FIX
+    if status == "blocked":
+        risk = confidence
+    else:
+        risk = 1 - confidence
+
     log = {
         "type": "text",
         "content": text_msg,
         "category": result["category"],
-        "confidence": result["confidence"],
+        "confidence": confidence,
+        "risk": risk,
         "status": status,
         "reason": reason,
         "timestamp": datetime.utcnow()
@@ -195,26 +170,27 @@ async def upload_image(file: UploadFile = File(...)):
 
     result = analyze_image(path)
 
-    status = "safe"
+    confidence = result["confidence"]
 
+    status = "safe"
     if result["status"] == "unsafe":
         status = "blocked"
 
-    # Human readable reason
-    if result["category"] == "sexual_content":
-        reason = "The image contains nudity or sexually explicit content"
-
-    elif result["category"] == "violence":
-        reason = "The image contains violent or harmful content"
-
+    # 🔥 RISK FIX
+    if status == "blocked":
+        risk = confidence
     else:
-        reason = "Image passed safety moderation"
+        risk = 1 - confidence
+
+    reason = result.get("description", "Image moderation result")
 
     log = {
         "type": "image",
         "content": file.filename,
+        "path": f"/uploads/{file.filename}",
         "category": result["category"],
-        "confidence": result["confidence"],
+        "confidence": confidence,
+        "risk": risk,
         "status": status,
         "reason": reason,
         "timestamp": datetime.utcnow()
@@ -250,26 +226,27 @@ async def upload_video(file: UploadFile = File(...)):
 
     result = analyze_video(path)
 
-    status = "safe"
+    confidence = result["confidence"]
 
+    status = "safe"
     if result["status"] == "unsafe":
         status = "blocked"
 
-    # Human readable reason
-    if result["category"] == "sexual_content":
-        reason = "The video contains nudity or sexually explicit content"
-
-    elif result["category"] == "violence":
-        reason = "The video contains violent scenes or physical threats"
-
+    # 🔥 RISK FIX
+    if status == "blocked":
+        risk = confidence
     else:
-        reason = "Video passed safety moderation"
+        risk = 1 - confidence
+
+    reason = result.get("description", "Video moderation result")
 
     log = {
         "type": "video",
         "content": file.filename,
+        "path": f"/uploads/{file.filename}",
         "category": result["category"],
-        "confidence": result["confidence"],
+        "confidence": confidence,
+        "risk": risk,
         "status": status,
         "reason": reason,
         "timestamp": datetime.utcnow()

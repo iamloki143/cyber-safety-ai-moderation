@@ -9,9 +9,12 @@ classifier = pipeline(
 # Tanglish abusive slang
 TANGLISH_ABUSE = [
     "punda","oombu","thevdiya","thevidiya",
-    "naaye","panni","pundamavan","thayoli"
+    "naaye","panni","pundamavan","thayoli",
+    "otha","baadu","thooma","gunda","porukki",
+    "porambokku","koothi","lawda","sootha",
+    "soothu","kunji","othalokka","poolu",
+    "pool","mola","molai","kottai","kola"
 ]
-
 # English abusive words
 ENGLISH_ABUSE = [
     "fuck","bitch","idiot","stupid","dumb",
