@@ -129,7 +129,6 @@ def chat(message: dict):
         status = "blocked"
         reason = "Toxic abusive language detected"
 
-    # 🔥 RISK FIX
     if status == "blocked":
         risk = confidence
     else:
@@ -176,7 +175,6 @@ async def upload_image(file: UploadFile = File(...)):
     if result["status"] == "unsafe":
         status = "blocked"
 
-    # 🔥 RISK FIX
     if status == "blocked":
         risk = confidence
     else:
@@ -232,7 +230,6 @@ async def upload_video(file: UploadFile = File(...)):
     if result["status"] == "unsafe":
         status = "blocked"
 
-    # 🔥 RISK FIX
     if status == "blocked":
         risk = confidence
     else:

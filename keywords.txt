@@ -1,0 +1,3 @@
+Chat page → http://127.0.0.1:8000
+Dashboard → http://127.0.0.1:8000/dashboard
+python -m uvicorn backend.main:app --reload
